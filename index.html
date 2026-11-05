@@ -14,8 +14,7 @@ $('start').onclick=()=>{if(!navigator.geolocation)return say('このブラウザ
 $('center').onclick=()=>{if(marker)map.setView(marker.getLatLng(),16);else navigator.geolocation?.getCurrentPosition(p=>{let ll=[p.coords.latitude,p.coords.longitude];map.setView(ll,16);if(!marker)marker=L.circleMarker(ll,{radius:7,color:'#fff',weight:3,fillColor:'#6f88df',fillOpacity:1}).addTo(map)},()=>say('現在地を取得できません。位置情報を許可してください.'))};
 $('search').onclick=async()=>{let q=$('query').value.trim();if(!q)return say('場所を入力してください');$('search').disabled=true;try{let r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q='+encodeURIComponent(q)),a=await r.json();if(!a.length)return say('場所が見つかりません');let h=a[0],ll=[+h.lat,+h.lon];map.setView(ll,15);L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#e6a45c',fillOpacity:1}).addTo(layer).bindPopup(h.display_name).openPopup();say('検索結果へ移動しました')}catch(e){say('検索できません。通信を確認してください')}finally{$('search').disabled=false}};
 $('scopes').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('scopes').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));draw()});function page(id){
-function page(id){
-  $('mapScreen').style.display=id==='mapScreen'?'flex':'none';
+function page(id){$('mapScreen').style.display=id==='mapScreen'?'flex':'none';
   ['photos','chat','profile'].forEach(x=>{
     $(x).style.display=x===id?'block':'none';
   });
