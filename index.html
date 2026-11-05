@@ -13,7 +13,23 @@ function point(pos){let p={lat:pos.coords.latitude,lng:pos.coords.longitude,at:n
 $('start').onclick=()=>{if(!navigator.geolocation)return say('このブラウザではGPSを利用できません');if(watch!==null)return;active={points:[],distance:0,startedAt:new Date().toISOString()};last=null;watch=navigator.geolocation.watchPosition(point,e=>{say('GPSエラー：位置情報の許可を確認してください');$('gpsStatus').textContent='GPS エラー'},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});$('gpsStatus').textContent='● 記録中';$('start').disabled=true;$('stop').disabled=false;draw();say('GPS記録を開始しました')};$('stop').onclick=()=>{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;if(active&&active.points.length){data.routes.push(active);data.sessions++;save()}active=null;last=null;$('gpsStatus').textContent='GPS 未開始';$('start').disabled=false;$('stop').disabled=true;draw();stats();say('記録を保存しました')};
 $('center').onclick=()=>{if(marker)map.setView(marker.getLatLng(),16);else navigator.geolocation?.getCurrentPosition(p=>{let ll=[p.coords.latitude,p.coords.longitude];map.setView(ll,16);if(!marker)marker=L.circleMarker(ll,{radius:7,color:'#fff',weight:3,fillColor:'#6f88df',fillOpacity:1}).addTo(map)},()=>say('現在地を取得できません。位置情報を許可してください.'))};
 $('search').onclick=async()=>{let q=$('query').value.trim();if(!q)return say('場所を入力してください');$('search').disabled=true;try{let r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q='+encodeURIComponent(q)),a=await r.json();if(!a.length)return say('場所が見つかりません');let h=a[0],ll=[+h.lat,+h.lon];map.setView(ll,15);L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#e6a45c',fillOpacity:1}).addTo(layer).bindPopup(h.display_name).openPopup();say('検索結果へ移動しました')}catch(e){say('検索できません。通信を確認してください')}finally{$('search').disabled=false}};
-$('scopes').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('scopes').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));draw()});function page(id){$('mapScreen').style.display=id==='mapScreen'?'flex':'none';['photos','chat','profile'].forEach(x=>$(x).style.display=x===id?'block':'none');document.querySelectorAll('.bottom button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));if(id==='photos')render()}document.querySelectorAll('.bottom button').forEach(b=>b.onclick=()=>page(b.dataset.page));
+$('scopes').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('scopes').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));draw()});function page(id){
+function page(id){
+  $('mapScreen').style.display=id==='mapScreen'?'flex':'none';
+  ['photos','chat','profile'].forEach(x=>{
+    $(x).style.display=x===id?'block':'none';
+  });
+  document.querySelectorAll('.bottom button').forEach(b=>{
+    b.classList.toggle('active',b.dataset.page===id);
+  });
+  if(id==='photos')render();
+  if(id==='mapScreen'){
+    requestAnimationFrame(()=>{
+      map.invalidateSize();
+    });
+  }
+}
+document.querySelectorAll('.bottom button').forEach(b=>b.onclick=()=>page(b.dataset.page));
 $('post').onclick=()=>{let f=$('photo').files[0],caption=$('caption').value.trim();if(!f&&!caption)return say('文章か写真を追加してください');let done=img=>{data.posts.unshift({caption,visibility:$('visibility').value,img,at:new Date().toISOString()});save();$('caption').value='';$('photo').value='';render();say('端末内に保存しました')};if(f){let rd=new FileReader();rd.onload=()=>done(rd.result);rd.readAsDataURL(f)}else done(null)};function render(){$('posts').innerHTML='';data.posts.forEach(p=>{let d=document.createElement('div');d.className='post';let b=document.createElement('b');b.textContent=p.caption||'写真';let m=document.createElement('div');m.className='desc';m.textContent=p.visibility+' ・ '+new Date(p.at).toLocaleString('ja-JP');d.append(b,m);if(p.img){let im=document.createElement('img');im.src=p.img;d.append(im)}$('posts').append(d)})}
 $('export').onclick=()=>{let a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.href=u;a.download='rurumo-data.json';a.click();URL.revokeObjectURL(u)};$('clear').onclick=()=>{if(confirm('この端末に保存したルートと投稿を削除しますか？')){data={routes:[],posts:[],sessions:0};save();draw();stats();render();say('データを削除しました')}};draw();stats();render();
 // Supabaseとの接続
@@ -24,7 +40,7 @@ supabaseScript.onload = () => {
     'https://rbzityloywzrtisnhttj.supabase.co/rest/v1/',
     'sb_publishable_vzD7bhj7mn1vA81dqLwZTQ_c_CsA4F_'
   );
-  console.log('Rurumo connected!');
+  console.log('Rurumo 
 };
 document.head.appendChild(supabaseScript);
 })();</script></body></html>
