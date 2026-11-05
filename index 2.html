@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef0ff">
+<title>るるも | RURUMO</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f5f6ff;--panel:#fff;--ink:#30334b;--muted:#8589a6;--blue:#7185df;--blue2:#e9edff;--line:#e8eaf5;--danger:#d96c7b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif}
+button,input,textarea,select{font:inherit}button{cursor:pointer}#app{min-height:100dvh;display:flex;flex-direction:column;max-width:900px;margin:auto}
+header{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#fff;border-bottom:1px solid var(--line);flex-shrink:0}
+.logo{font-size:20px;font-weight:800;letter-spacing:.08em;color:#687bd1}#status{font-size:12px;color:var(--muted)}
+main{flex:1;min-height:0;padding-bottom:76px}.screen{display:none;min-height:calc(100dvh - 134px)}.screen.active{display:block}#mapScreen.active{display:flex;flex-direction:column}
+.scopebar{display:flex;gap:8px;padding:12px 14px;background:#fff}.scopebar button{border:0;border-radius:20px;padding:8px 18px;background:#f0f1f8;color:var(--muted);font-weight:600}.scopebar button.active{background:var(--blue2);color:#596fcf}
+.maptools{display:flex;gap:8px;padding:10px 12px;background:#fff;align-items:center}.maptools input{min-width:0;flex:1;border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}
+.btn{border:0;border-radius:12px;padding:10px 13px;background:var(--blue);color:#fff;font-weight:650}.btn.secondary{background:var(--blue2);color:#586bc6}.btn.danger{background:#fff0f1;color:var(--danger)}.btn:disabled{opacity:.45;cursor:not-allowed}
+.map-options{display:flex;gap:8px;padding:8px 12px;background:#fff;align-items:center;flex-wrap:wrap}.map-options button{font-size:12px;padding:8px 11px}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px}.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}.stat strong{display:block;font-size:20px;color:#687bd1}.stat span{font-size:11px;color:var(--muted)}.member{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--line)}.dot{width:13px;height:13px;border-radius:50%;flex:none}.member:last-child{border:0}
+#map{height:52vh;min-height:280px;flex:1;z-index:1;background:#eef0f5}.gpsbar{display:flex;gap:9px;padding:12px;background:#fff}.gpsbar button{flex:1}.hint{font-size:12px;color:var(--muted);padding:8px 14px;background:#fff}
+.panel{margin:14px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:18px}h2{font-size:19px;margin:4px 0 14px}p{line-height:1.6}.muted{color:var(--muted);font-size:13px}
+.field{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;margin:6px 0 12px;background:#fff}textarea.field{min-height:90px;resize:vertical}
+.post{padding:13px 0;border-bottom:1px solid var(--line)}.post:last-child{border:0}.post img{max-width:100%;max-height:260px;border-radius:12px;display:block;margin-top:8px}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(900px,100%);height:70px;padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:flex;justify-content:space-around;background:#fff;border-top:1px solid var(--line);z-index:1000}
+.bottom button{border:0;background:transparent;color:#999db4;font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:60px}.bottom button .ico{font-size:20px}.bottom button.active{color:#6278d5;font-weight:700}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#34384f;color:#fff;padding:10px 16px;border-radius:20px;font-size:13px;z-index:2000;display:none;max-width:90%;text-align:center}
+@media(min-width:700px){#map{height:60vh}.screen{min-height:calc(100vh - 134px)}}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div class="logo">るるも <span style="font-size:11px">RURUMO</span></div><div id="status">準備中</div></header>
+<main>
+<section id="mapScreen" class="screen active">
+<div class="scopebar" id="scopes"><button class="active" data-scope="自分">自分</button><button data-scope="グループ">グループ</button><button data-scope="世界">世界</button></div>
+<div class="maptools"><input id="searchInput" type="search" placeholder="場所・住所を検索"><button class="btn secondary" id="searchBtn">検索</button></div>
+<div class="map-options"><button class="btn secondary" id="baseMapBtn">薄い地図：OFF</button><button class="btn secondary" id="statsBtn">距離データ</button></div>
+<div id="map"></div>
+<div class="stats" id="mapStats"><div class="stat"><strong id="sessionDistance">0.00 km</strong><span>今回の移動距離</span></div><div class="stat"><strong id="totalDistance">0.00 km</strong><span>累計移動距離</span></div><div class="stat"><strong id="routeCountInline">0</strong><span>記録回数</span></div><div class="stat"><strong id="pointCount">0</strong><span>記録ポイント数</span></div></div>
+<div class="gpsbar"><button class="btn" id="startBtn">● 記録開始</button><button class="btn danger" id="stopBtn" disabled>■ 記録終了</button><button class="btn secondary" id="locateBtn">現在地</button></div>
+<div class="hint" id="mapHint">記録を開始すると、移動した道が地図に残ります。</div>
+</section>
+<section id="photosScreen" class="screen">
+<div class="panel"><h2>写真を投稿</h2><label class="muted" for="photoFile">写真</label><input class="field" id="photoFile" type="file" accept="image/*"><label class="muted" for="photoText">コメント</label><textarea class="field" id="photoText" placeholder="ここで見つけたもの・思い出など"></textarea><label class="muted" for="photoScope">公開範囲</label><select class="field" id="photoScope"><option value="自分のみ">自分のみ</option><option value="グループ">グループ</option><option value="世界">世界</option></select><button class="btn" id="postBtn" style="width:100%">投稿する</button><p class="muted">この試作版では投稿はこの端末内に保存され、他の人には共有されません。</p></div>
+<div class="panel"><h2>投稿一覧</h2><div id="postList" class="muted">まだ投稿はありません。</div></div>
+</section>
+<section id="chatScreen" class="screen">
+<div class="panel"><h2>グループ</h2>
+<h3>グループを作成</h3><input class="field" id="groupName" placeholder="グループ名">
+<button class="btn" id="createGroupBtn" style="width:100%">グループを作成</button>
+<div style="height:14px"></div><h3>招待コードで参加</h3>
+<input class="field" id="inviteCodeInput" placeholder="招待コードを入力">
+<button class="btn secondary" id="joinGroupBtn" style="width:100%">参加する</button>
+<p class="muted">現在はこの端末内での試作です。別の端末の友達と共有するには、次の段階でSupabaseへの接続が必要です。</p>
+</div>
+<div class="panel"><h2>参加中のグループ</h2><div id="groupList" class="muted">まだグループはありません。</div></div>
+<div class="panel"><h2>メンバーの色</h2><div id="memberColors" class="muted">グループを作成すると色が表示されます。</div></div>
+</section>
+<section id="profileScreen" class="screen"><div class="panel"><h2>マイページ</h2><p>記録したルート：<strong id="routeCount">0</strong> 件</p><p>写真の投稿：<strong id="postCount">0</strong> 件</p><button class="btn secondary" id="exportBtn" style="width:100%;margin:6px 0">データを書き出す（JSON）</button><button class="btn danger" id="clearBtn" style="width:100%;margin:6px 0">この端末のデータを削除</button><p class="muted">データは現在このブラウザ内に保存されます。ブラウザのデータ消去や別端末への移行で失われる場合があります。</p></div></section>
+</main>
+<nav class="bottom"><button class="active" data-page="mapScreen"><span class="ico">⌖</span>地図</button><button data-page="chatScreen"><span class="ico">▤</span>チャット</button><button data-page="photosScreen"><span class="ico">▧</span>写真投稿</button><button data-page="profileScreen"><span class="ico">♙</span>マイページ</button></nav>
+<div id="toast"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = 'rurumo_data_v1';
+  let data = loadData();
+  let map = null, routeLine = null, currentPoints = [], watchId = null, recording = false, toastTimer = null, baseTiles = null, baseMapVisible = false, lastPosition = null, sessionMeters = 0;
+
+  function loadData() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (saved && Array.isArray(saved.routes) && Array.isArray(saved.posts)) { if (!Array.isArray(saved.groups)) saved.groups = []; return saved; }
+    } catch (error) { console.warn('保存データを読み込めませんでした', error); }
+    return { routes: [], posts: [], groups: [] };
+  }
+  function saveData() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); updateCounts(); return true; }
+    catch (error) { toast('保存できませんでした。写真の容量が大きすぎる可能性があります。'); console.error(error); return false; }
+  }
+  function toast(message) {
+    $('toast').textContent = message;
+    $('toast').style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').style.display = 'none', 2600);
+  }
+  function updateCounts() {
+    $('routeCount').textContent = data.routes.length;
+    $('postCount').textContent = data.posts.length;
+    updateDistanceStats();
+  }
+  function distanceOf(points) {
+    if (!Array.isArray(points) || points.length < 2 || !window.L) return 0;
+    let total = 0;
+    for (let i = 1; i < points.length; i++) total += L.latLng(points[i-1]).distanceTo(L.latLng(points[i]));
+    return total;
+  }
+  function updateDistanceStats() {
+    const total = data.routes.reduce((sum, route) => sum + distanceOf(route.points), 0);
+    $('sessionDistance').textContent = (sessionMeters / 1000).toFixed(2) + ' km';
+    $('totalDistance').textContent = (total / 1000).toFixed(2) + ' km';
+    $('routeCountInline').textContent = data.routes.length;
+    $('pointCount').textContent = data.routes.reduce((sum, route) => sum + (route.points?.length || 0), 0) + currentPoints.length;
+  }
+  const palette = ['#7185df','#ed9b54','#62ad86','#a47bd4','#df7894','#4caeb8','#c1a34c','#71818f'];
+  function renderGroups() {
+    const list = $('groupList'), colors = $('memberColors');
+    list.replaceChildren(); colors.replaceChildren();
+    if (!data.groups.length) { list.textContent = 'まだグループはありません。'; colors.textContent = 'グループを作成すると色が表示されます。'; return; }
+    data.groups.forEach(group => {
+      const wrap = document.createElement('div'); wrap.className = 'post';
+      const title = document.createElement('strong'); title.textContent = group.name;
+      const code = document.createElement('p'); code.className = 'muted'; code.textContent = '招待コード（試作用）：' + group.code;
+      const me = document.createElement('div'); me.className = 'member';
+      const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = palette[0];
+      const label = document.createElement('span'); label.textContent = '自分';
+      me.append(dot, label); wrap.append(title, code, me); list.append(wrap);
+      const colorRow = document.createElement('div'); colorRow.className = 'member';
+      const colorDot = document.createElement('span'); colorDot.className = 'dot'; colorDot.style.background = palette[0];
+      const colorName = document.createElement('span'); colorName.textContent = '自分：青';
+      colorRow.append(colorDot, colorName); colors.append(colorRow);
+    });
+  }
+  function createGroup() {
+    const name = $('groupName').value.trim();
+    if (!name) return toast('グループ名を入力してください。');
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    data.groups.push({ id: Date.now(), name, code });
+    if (!saveData()) return;
+    $('groupName').value = ''; renderGroups(); toast('グループを作成しました。');
+  }
+  function joinGroup() {
+    const code = $('inviteCodeInput').value.trim().toUpperCase();
+    if (!code) return toast('招待コードを入力してください。');
+    const found = data.groups.find(group => group.code === code);
+    if (!found) return toast('この試作版では、別端末で作ったコードには参加できません。');
+    toast('この端末内のグループを確認しました。');
+  }
+  function toggleBaseMap() {
+    if (!map || !baseTiles) return;
+    baseMapVisible = !baseMapVisible;
+    if (baseMapVisible) baseTiles.addTo(map); else map.removeLayer(baseTiles);
+    $('baseMapBtn').textContent = baseMapVisible ? '薄い地図：ON' : '薄い地図：OFF';
+  }
+  function initMap() {
+    if (!window.L) { $('status').textContent = '地図を読み込めません'; toast('地図の読み込みに失敗しました。通信状態を確認してください。'); return; }
+    map = L.map('map').setView([37.04, 138.88], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    routeLine = L.polyline([], { color: '#7185df', weight: 5, opacity: .9 }).addTo(map);
+    baseTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors', opacity: .28 });
+    data.routes.forEach(route => {
+      if (Array.isArray(route.points) && route.points.length > 1) L.polyline(route.points, { color: '#8d9be0', weight: 4, opacity: .65 }).addTo(map);
+    });
+    $('status').textContent = '準備完了';
+  }
+  function setRecordingUI(active) {
+    recording = active; $('startBtn').disabled = active; $('stopBtn').disabled = !active;
+    $('mapHint').textContent = active ? '記録中です。移動した位置を記録しています。' : '記録を開始すると、移動した道が地図に残ります。';
+  }
+  function startRecording() {
+    if (!navigator.geolocation) return toast('このブラウザでは位置情報を利用できません。');
+    if (!map || recording) return;
+    currentPoints = []; sessionMeters = 0; lastPosition = null; routeLine.setLatLngs([]); updateDistanceStats(); setRecordingUI(true);
+    watchId = navigator.geolocation.watchPosition(position => {
+      const point = [position.coords.latitude, position.coords.longitude];
+      const previous = currentPoints[currentPoints.length - 1];
+      if (!previous || map.distance(previous, point) >= 5) {
+        if (previous) sessionMeters += map.distance(previous, point);
+        currentPoints.push(point); routeLine.addLatLng(point); updateDistanceStats();
+        if (currentPoints.length === 1) map.setView(point, 16);
+      }
+    }, error => {
+      const messages = {1:'位置情報の利用が許可されていません。ブラウザの設定を確認してください。',2:'現在地を取得できません。屋外などで再度お試しください。',3:'位置情報の取得がタイムアウトしました。'};
+      toast(messages[error.code] || '位置情報を取得できませんでした。'); stopRecording(false);
+    }, { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 });
+    toast('位置情報の記録を開始しました。');
+  }
+  function stopRecording(showMessage = true) {
+    if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    if (currentPoints.length > 1) {
+      data.routes.push({ id: Date.now(), createdAt: new Date().toISOString(), points: currentPoints.slice() });
+      saveData(); toast('ルートを保存しました。');
+    } else if (showMessage) toast('記録した位置が少ないため、ルートは保存しませんでした。');
+    currentPoints = []; lastPosition = null; setRecordingUI(false); updateDistanceStats();
+  }
+  function locateMe() {
+    if (!navigator.geolocation || !map) return toast('位置情報を利用できません。');
+    navigator.geolocation.getCurrentPosition(pos => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
+      () => toast('現在地を取得できません。位置情報の許可を確認してください。'),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 });
+  }
+  async function searchPlace() {
+    const query = $('searchInput').value.trim();
+    if (!query) return toast('場所を入力してください。');
+    $('searchBtn').disabled = true;
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(query);
+      const response = await fetch(url, { headers: { 'Accept-Language': 'ja' } });
+      if (!response.ok) throw new Error('search failed');
+      const results = await response.json();
+      if (!results.length) { toast('場所が見つかりませんでした。'); return; }
+      map.setView([Number(results[0].lat), Number(results[0].lon)], 15);
+      toast('検索した場所に移動しました。');
+    } catch (error) { toast('検索に失敗しました。通信状態を確認してください。'); }
+    finally { $('searchBtn').disabled = false; }
+  }
+  function changePage(pageId) {
+    document.querySelectorAll('.screen').forEach(screen => screen.classList.toggle('active', screen.id === pageId));
+    document.querySelectorAll('.bottom button').forEach(button => button.classList.toggle('active', button.dataset.page === pageId));
+    if (pageId === 'mapScreen' && map) setTimeout(() => map.invalidateSize(), 120);
+    if (pageId === 'photosScreen') renderPosts();
+    updateCounts();
+  }
+  function renderPosts() {
+    const list = $('postList'); list.replaceChildren();
+    if (!data.posts.length) { list.textContent = 'まだ投稿はありません。'; return; }
+    [...data.posts].reverse().forEach(post => {
+      const article = document.createElement('article'); article.className = 'post';
+      const date = document.createElement('div'); date.className = 'muted';
+      date.textContent = new Date(post.createdAt).toLocaleString('ja-JP') + ' ・ ' + post.scope;
+      const text = document.createElement('p'); text.textContent = post.text || '（コメントなし）';
+      article.append(date, text);
+      if (post.image) { const img = document.createElement('img'); img.src = post.image; img.alt = '投稿した写真'; article.append(img); }
+      list.append(article);
+    });
+  }
+  function addPhotoPost() {
+    const file = $('photoFile').files[0], text = $('photoText').value.trim();
+    if (!file && !text) return toast('写真かコメントを入力してください。');
+    if (file && !file.type.startsWith('image/')) return toast('画像ファイルを選択してください。');
+    if (file && file.size > 2 * 1024 * 1024) return toast('写真は2MB以下にしてください。');
+    const savePost = image => {
+      data.posts.push({ id: Date.now(), createdAt: new Date().toISOString(), text, scope: $('photoScope').value, image });
+      if (!saveData()) return;
+      $('photoFile').value = ''; $('photoText').value = ''; renderPosts(); toast('この端末に投稿を保存しました。');
+    };
+    if (!file) return savePost(null);
+    const reader = new FileReader(); reader.onload = () => savePost(reader.result);
+    reader.onerror = () => toast('写真を読み込めませんでした。'); reader.readAsDataURL(file);
+  }
+  function exportData() {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'rurumo-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('バックアップを書き出しました。');
+  }
+  function clearData() {
+    if (!confirm('この端末に保存したルートと写真をすべて削除します。よろしいですか？')) return;
+    data = { routes: [], posts: [] }; saveData();
+    if (map) {
+      map.eachLayer(layer => { if (layer instanceof L.Polyline && layer !== routeLine) map.removeLayer(layer); });
+      routeLine.setLatLngs([]);
+    }
+    renderPosts(); toast('この端末のデータを削除しました。');
+  }
+
+  document.querySelectorAll('.bottom button').forEach(button => button.addEventListener('click', () => changePage(button.dataset.page)));
+  document.querySelectorAll('#scopes button').forEach(button => button.addEventListener('click', () => {
+    document.querySelectorAll('#scopes button').forEach(item => item.classList.toggle('active', item === button));
+    if (button.dataset.scope !== '自分') toast('グループ・世界の共有表示は、サーバー接続後に利用できます。');
+  }));
+  $('startBtn').addEventListener('click', startRecording);
+  $('stopBtn').addEventListener('click', () => stopRecording(true));
+  $('locateBtn').addEventListener('click', locateMe);
+  $('searchBtn').addEventListener('click', searchPlace);
+  $('searchInput').addEventListener('keydown', event => { if (event.key === 'Enter') searchPlace(); });
+  $('postBtn').addEventListener('click', addPhotoPost);
+  $('exportBtn').addEventListener('click', exportData);
+  $('clearBtn').addEventListener('click', clearData);
+  $('baseMapBtn').addEventListener('click', toggleBaseMap);
+  $('statsBtn').addEventListener('click', () => { const panel = $('mapStats'); panel.style.display = panel.style.display === 'none' ? 'grid' : 'none'; });
+  $('createGroupBtn').addEventListener('click', createGroup);
+  $('joinGroupBtn').addEventListener('click', joinGroup);
+  window.addEventListener('pagehide', () => { if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId); });
+
+  updateCounts(); initMap(); renderPosts(); renderGroups();
+})();
+</script>
+</body>
+</html>
