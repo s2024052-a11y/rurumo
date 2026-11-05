@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f8ff">
+<title>rurumo｜歩いた道が地図になる</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--blue:#788be8;--blue2:#aab8ff;--ink:#29334d;--muted:#7c8499;--bg:#f6f8ff;--card:#fff;--line:#e8ebf5;--danger:#e8798a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer;border:0}.app{max-width:900px;margin:auto;min-height:100dvh;padding-bottom:84px}.top{padding:18px 18px 10px;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:800;font-size:22px;letter-spacing:.04em;color:#7183df}.sub{font-size:11px;color:var(--muted)}.pill{font-size:11px;border-radius:99px;padding:6px 10px;background:#eef1ff;color:#687bd5}.page{display:none;padding:8px 14px 18px}.page.active{display:block}.map-wrap{height:min(63vh,620px);min-height:390px;border-radius:22px;overflow:hidden;background:#fff;border:1px solid var(--line);position:relative}#map{height:100%;width:100%;background:#fff}.map-actions{position:absolute;z-index:500;top:12px;right:12px;display:flex;flex-direction:column;gap:8px}.fab{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:13px;padding:10px 12px;box-shadow:0 3px 12px #26345a12;font-size:13px}.modebar{display:flex;gap:7px;margin:12px 0}.mode{flex:1;padding:10px 5px;border-radius:12px;background:#fff;color:var(--muted);border:1px solid var(--line);font-size:13px}.mode.active{background:#edf0ff;color:#6175d8;border-color:#dce2ff;font-weight:700}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}.stat,.card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:13px}.stat b{display:block;font-size:20px;color:#687bd8}.stat span{font-size:11px;color:var(--muted)}.recordbar{display:flex;gap:9px}.primary,.secondary,.danger{border-radius:14px;padding:13px 15px;font-weight:700}.primary{background:var(--blue);color:#fff;flex:1}.secondary{background:#edf0ff;color:#6175d8}.danger{background:#fff0f2;color:#cf6476}.section-title{font-size:18px;margin:12px 2px}.muted{color:var(--muted);font-size:13px;line-height:1.6}.card{margin:10px 0}.field{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;color:var(--ink);margin:6px 0 12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.bottom{position:fixed;z-index:1000;bottom:0;left:0;right:0;background:#ffffffed;backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:8px max(12px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);max-width:900px;margin:auto}.nav{background:transparent;color:#9299ac;padding:7px 2px;font-size:11px}.nav strong{display:block;font-size:19px;margin-bottom:2px}.nav.active{color:#7183df;font-weight:700}.route-item,.post-item{border-bottom:1px solid var(--line);padding:12px 0}.post-item img{width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-top:8px}.empty{text-align:center;padding:30px 12px;color:var(--muted);font-size:13px}.small{font-size:11px;color:var(--muted)}.hidden{display:none!important}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.chip{background:#f0f2ff;color:#7183df;padding:5px 9px;border-radius:99px;font-size:11px}.switchrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0}.notice{background:#fff8e9;border:1px solid #f4e6c7;border-radius:13px;padding:11px;color:#806b3d;font-size:12px;line-height:1.6}
+@media(min-width:700px){.page{padding:12px 24px 24px}.top{padding:22px 26px 12px}.map-wrap{height:570px}.bottom{border-radius:18px 18px 0 0}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div><div class="brand">rurumo</div><div class="sub">歩いた道が、地図になっていく。</div></div><span class="pill" id="saveState">この端末に保存</span></header>
+
+<main>
+<section class="page active" id="page-map">
+ <div class="modebar"><button class="mode active" data-mode="self">自分</button><button class="mode" data-mode="group">グループ</button><button class="mode" data-mode="world">世界</button></div>
+ <div class="map-wrap"><div id="map"></div><div class="map-actions"><button class="fab" id="locateBtn">◎ 現在地</button><button class="fab" id="baseBtn">薄い地図 OFF</button></div></div>
+ <div class="stats"><div class="stat"><b id="distance">0.00 km</b><span>今回の距離</span></div><div class="stat"><b id="totalDistance">0.00 km</b><span>累計距離</span></div><div class="stat"><b id="pointCount">0</b><span>記録ポイント</span></div></div>
+ <div class="recordbar"><button class="primary" id="recordBtn">● 記録を開始</button><button class="secondary" id="finishBtn" disabled>終了</button></div>
+ <p class="muted" id="gpsStatus">記録していない状態です。記録開始を押すとGPSの許可を求めます。</p>
+ <div class="notice">地図は初期状態で真っ白です。自分が記録したルートだけが線で表示されます。「薄い地図」をONにすると通常の地図を薄く重ねます。</div>
+</section>
+
+<section class="page" id="page-chat">
+ <h2 class="section-title">グループ</h2>
+ <div class="card"><p class="muted">友達とルートを共有するためのグループ画面です。現在の版では、この端末内での試作機能です。</p>
+ <label class="small">グループ名</label><input class="field" id="groupName" placeholder="例：いつものメンバー">
+ <button class="primary" id="createGroup">グループを作成</button></div>
+ <div class="card"><div class="row"><b>参加中のグループ</b><span class="chip" id="groupCount">0件</span></div><div id="groupsList" class="empty">まだグループはありません。</div></div>
+ <div class="card"><b>招待コードで参加</b><input class="field" id="inviteInput" placeholder="招待コード"><button class="secondary" id="joinGroup">コードを入力</button><p class="small">※現在は同じ端末内のデモ用です。別端末との共有は未実装です。</p></div>
+ <div class="card"><b>グループチャット（準備中）</b><div class="empty">サーバー接続後に利用できるようにします。</div></div>
+</section>
+
+<section class="page" id="page-post">
+ <h2 class="section-title">思い出を投稿</h2>
+ <div class="card"><label class="small">写真</label><input class="field" type="file" id="photoFile" accept="image/*"><label class="small">コメント</label><textarea class="field" id="photoCaption" rows="3" placeholder="ここで見つけた景色、思い出など"></textarea><label class="small">公開範囲</label><select class="field" id="visibility"><option value="private">自分だけ</option><option value="group">グループ（準備中）</option><option value="world">世界（準備中）</option></select><button class="primary" id="postPhoto">投稿する</button><p class="small">写真は端末内に保存されます。位置情報は投稿に自動添付しません。</p></div>
+ <h3 class="section-title">投稿一覧</h3><div id="postsList"></div>
+</section>
+
+<section class="page" id="page-me">
+ <h2 class="section-title">マイページ</h2>
+ <div class="stats"><div class="stat"><b id="meDistance">0.00</b><span>累計 km</span></div><div class="stat"><b id="routeCount">0</b><span>ルート数</span></div><div class="stat"><b id="mePoints">0</b><span>ポイント数</span></div></div>
+ <div class="card"><b>記録したルート</b><div id="routesList" class="empty">まだルートはありません。</div></div>
+ <div class="card"><b>データ管理</b><p class="muted">この試作品ではデータはこのブラウザ内に保存されます。ブラウザのデータを消すと失われる場合があります。</p><button class="secondary" id="exportBtn">データを書き出す（JSON）</button> <button class="danger" id="clearBtn">この端末のデータを削除</button></div>
+ <div class="card"><b>サーバー接続について</b><p class="muted">Supabaseプロジェクトは別途設定が必要です。このHTMLはまだSupabaseへのデータ同期を実装していません。公開用キーだけを使い、secret / service_roleキーをHTMLに入れないでください。</p></div>
+ <div class="notice">位置情報は初期状態で非公開です。自宅・学校などが分かるルートを公開しないよう注意してください。ブラウザを閉じている間のGPS記録は保証されません。</div>
+</section>
+</main>
+<nav class="bottom"><button class="nav active" data-page="map"><strong>⌖</strong>地図</button><button class="nav" data-page="chat"><strong>☷</strong>チャット</button><button class="nav" data-page="post"><strong>＋</strong>写真投稿</button><button class="nav" data-page="me"><strong>♙</strong>マイページ</button></nav>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(()=> {
+'use strict';
+const $=id=>document.getElementById(id), KEY='rurumo_v1_data';
+const blank=()=>({routes:[],posts:[],groups:[]});
+let data=blank(),map,routeLayers=[],tileLayer=null,watchId=null,recording=false,current=[],currentMeters=0,baseVisible=false,mode='self';
+function load(){try{data=JSON.parse(localStorage.getItem(KEY))||blank()}catch(e){data=blank()} if(!Array.isArray(data.routes))data.routes=[];if(!Array.isArray(data.posts))data.posts=[];if(!Array.isArray(data.groups))data.groups=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));$('saveState').textContent='この端末に保存'}catch(e){$('saveState').textContent='保存容量不足';alert('保存できませんでした。写真の容量が大きすぎる可能性があります。')}}
+function initMap(){map=L.map('map',{zoomControl:true,attributionControl:false}).setView([35.6812,139.7671],13);tileLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,opacity:.28,attribution:'© OpenStreetMap contributors'});drawRoutes()}
+function drawRoutes(){routeLayers.forEach(x=>map.removeLayer(x));routeLayers=[];if(mode==='world')return;data.routes.forEach(r=>{if(!r.points||r.points.length<2)return;const l=L.polyline(r.points.map(p=>[p.lat,p.lng]),{color:'#788be8',weight:5,opacity:.9,lineCap:'round'}).addTo(map);routeLayers.push(l)});if(current.length>1){routeLayers.push(L.polyline(current.map(p=>[p.lat,p.lng]),{color:'#5e79ec',weight:5,opacity:.95}).addTo(map))}}
+function fmt(km){return km.toFixed(2)+' km'}
+function totalKm(){return data.routes.reduce((n,r)=>n+(r.distance||0),0)}
+function refresh(){const points=data.routes.reduce((n,r)=>n+(r.points?.length||0),0);$('distance').textContent=fmt(currentMeters/1000);$('totalDistance').textContent=fmt(totalKm());$('pointCount').textContent=points+current.length;$('meDistance').textContent=totalKm().toFixed(2);$('routeCount').textContent=data.routes.length;$('mePoints').textContent=points;renderRoutes();renderPosts();renderGroups();drawRoutes()}
+function distance(a,b){const R=6371000,toRad=x=>x*Math.PI/180,dLat=toRad(b.lat-a.lat),dLon=toRad(b.lng-a.lng),x=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function gpsSuccess(pos){const p={lat:pos.coords.latitude,lng:pos.coords.longitude,at:Date.now(),accuracy:pos.coords.accuracy};if(current.length){const d=distance(current[current.length-1],p);if(d>2&&d<1000)currentMeters+=d;else if(d>=1000){$('gpsStatus').textContent='大きな位置飛びを検出したため、この点は距離計算から除外しました。'}}current.push(p);map.setView([p.lat,p.lng],Math.max(map.getZoom(),16));refresh();$('gpsStatus').textContent='GPS記録中 · 精度 約'+Math.round(p.accuracy)+'m'}
+function gpsError(err){$('gpsStatus').textContent='GPSを取得できません：'+err.message+'。位置情報の許可とHTTPS接続を確認してください。'}
+function start(){if(!navigator.geolocation){alert('このブラウザはGPSに対応していません');return}if(recording)return;current=[];currentMeters=0;recording=true;$('recordBtn').disabled=true;$('finishBtn').disabled=false;$('gpsStatus').textContent='GPSの位置情報を取得しています…';watchId=navigator.geolocation.watchPosition(gpsSuccess,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}
+function finish(){if(!recording)return;if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;recording=false;$('recordBtn').disabled=false;$('finishBtn').disabled=true;if(current.length){data.routes.unshift({id:crypto.randomUUID?.()||String(Date.now()),createdAt:new Date().toISOString(),distance:currentMeters/1000,points:current});save()}current=[];currentMeters=0;$('gpsStatus').textContent='記録を終了しました。';refresh()}
+function renderRoutes(){const el=$('routesList');if(!data.routes.length){el.className='empty';el.textContent='まだルートはありません。';return}el.className='';el.innerHTML=data.routes.map((r,i)=>`<div class="route-item"><div class="row"><b>ルート ${data.routes.length-i}</b><span class="chip">${fmt(r.distance||0)}</span></div><div class="small">${new Date(r.createdAt).toLocaleString('ja-JP')} · ${r.points?.length||0}ポイント</div><button class="secondary" data-route="${r.id}" style="margin-top:7px">地図で見る</button></div>`).join('');el.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>{const r=data.routes.find(x=>x.id===b.dataset.route);if(r?.points?.length){showPage('map');map.fitBounds(L.latLngBounds(r.points.map(p=>[p.lat,p.lng])),{padding:[30,30]})}})}
+function renderPosts(){const el=$('postsList');if(!data.posts.length){el.innerHTML='<div class="empty">投稿はまだありません。</div>';return}el.innerHTML=data.posts.map(p=>`<article class="post-item"><div class="row"><b>${escapeHtml(p.caption||'思い出')}</b><span class="chip">${p.visibility==='private'?'自分だけ':p.visibility}</span></div><div class="small">${new Date(p.createdAt).toLocaleString('ja-JP')}</div>${p.image?`<img src="${p.image}" alt="投稿写真">`:''}</article>`).join('')}
+function renderGroups(){$('groupCount').textContent=data.groups.length+'件';$('groupsList').innerHTML=data.groups.length?data.groups.map(g=>`<div class="route-item"><b>${escapeHtml(g.name)}</b><div class="small">招待コード：${g.code}</div></div>`).join(''):'<div class="empty">まだグループはありません。</div>'}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function showPage(name){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===name));if(name==='map')setTimeout(()=>map.invalidateSize(),100)}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='rurumo-backup.json';a.click();URL.revokeObjectURL(url)}
+$('recordBtn').onclick=start;$('finishBtn').onclick=finish;
+$('locateBtn').onclick=()=>{if(!navigator.geolocation){alert('GPS非対応です');return}navigator.geolocation.getCurrentPosition(p=>{map.setView([p.coords.latitude,p.coords.longitude],16)},gpsError,{enableHighAccuracy:true,timeout:12000})};
+$('baseBtn').onclick=()=>{baseVisible=!baseVisible;if(baseVisible)tileLayer.addTo(map);else map.removeLayer(tileLayer);$('baseBtn').textContent='薄い地図 '+(baseVisible?'ON':'OFF')};
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('active',x===b));mode=b.dataset.mode;if(mode!=='self'){$('gpsStatus').textContent=mode==='group'?'グループ共有はサーバー接続後に実装します。':'世界地図の集計は今後実装します。'} }else{$('gpsStatus').textContent='自分の記録を表示中です。'}drawRoutes()});
+$('createGroup').onclick=()=>{const name=$('groupName').value.trim();if(!name){alert('グループ名を入力してください');return}const code=Math.random().toString(36).slice(2,8).toUpperCase();data.groups.push({id:String(Date.now()),name,code});save();$('groupName').value='';refresh()};
+$('joinGroup').onclick=()=>{const code=$('inviteInput').value.trim().toUpperCase();const g=data.groups.find(x=>x.code===code);if(!g){alert('この端末内に該当する招待コードはありません。別端末との参加はサーバー機能が必要です。');return}alert(g.name+' に参加済みです。')};
+$('postPhoto').onclick=()=>{const file=$('photoFile').files[0],caption=$('photoCaption').value.trim(),visibility=$('visibility').value;if(!file&&!caption){alert('写真かコメントを入力してください');return}const add=image=>{data.posts.unshift({id:String(Date.now()),caption,image,visibility,createdAt:new Date().toISOString()});save();$('photoFile').value='';$('photoCaption').value='';refresh()};if(file){if(file.size>1200000){alert('写真は1.2MB以下にしてください（端末内保存の容量制限のため）');return}const reader=new FileReader();reader.onload=()=>add(reader.result);reader.readAsDataURL(file)}else add(null)};
+$('exportBtn').onclick=exportData;
+$('clearBtn').onclick=()=>{if(confirm('この端末に保存したルート・写真・グループをすべて削除します。よろしいですか？')){data=blank();save();refresh();map.setView([35.6812,139.7671],13)}};
+load();initMap();refresh();
+window.addEventListener('beforeunload',()=>{if(recording&&watchId!==null)navigator.geolocation.clearWatch(watchId)});
+})();
+</script>
+</body>
+</html>
