@@ -105,5 +105,6 @@ load();initMap();refresh();
 window.addEventListener('beforeunload',()=>{if(recording&&watchId!==null)navigator.geolocation.clearWatch(watchId)});
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </body>
 </html>
