@@ -107,21 +107,72 @@ window.addEventListener('beforeunload',()=>{if(recording&&watchId!==null)navigat
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = 'https://rbzityloywzrtisnhttj.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_vzD7bhj7mn1vA81dqLwZTQ_c_CsA4F_';
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
- supabase.from('profiles').select('*').limit(1)
-  .then(({ data, error }) => {
-    const status = document.getElementById('gpsStatus');
-    if (status) {
-      status.textContent = error
-        ? 'Supabase接続エラー：' + error.message
-        : 'Supabase接続成功！';
+<script>
+const status = document.getElementById('gpsStatus');
+
+async function testSupabase() {
+  try {
+    status.textContent = 'Supabase接続確認中...';
+
+    if (!window.supabase) {
+      throw new Error('Supabaseライブラリを読み込めませんでした');
     }
-  });
+
+    const SUPABASE_URL = '<script>
+const status = document.getElementById('gpsStatus');
+
+async function testSupabase() {
+  try {
+    status.textContent = 'Supabase接続確認中...';
+
+    if (!window.supabase) {
+      throw new Error('Supabaseライブラリを読み込めませんでした');
+    }
+
+    const SUPABASE_URL = 'https://rbzityloywzrtisnhttj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_vzD7bhj7mn1vA81dqLwZTQ_c_CsA4F_';
+
+    const supabase = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    const { error } = await supabase
+      .from('profiles')
+      .select('*')
+      .limit(1);
+
+    if (error) throw error;
+
+    status.textContent = 'Supabase接続成功！';
+  } catch (error) {
+    status.textContent = 'Supabase接続エラー：' + error.message;
+  }
+}
+
+testSupabase();
+</script>';
+    const SUPABASE_KEY = 'ここに今の公開用キーを入れる';
+
+    const supabase = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    const { error } = await supabase
+      .from('profiles')
+      .select('*')
+      .limit(1);
+
+    if (error) throw error;
+
+    status.textContent = 'Supabase接続成功！';
+  } catch (error) {
+    status.textContent = 'Supabase接続エラー：' + error.message;
+  }
+}
+
+testSupabase();
 </script>
 </body>
 </html>
