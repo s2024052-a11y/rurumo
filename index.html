@@ -82,7 +82,20 @@ $('recordBtn').onclick=start;$('finishBtn').onclick=finish;
 $('locateBtn').onclick=()=>{if(!navigator.geolocation){alert('GPS非対応です');return}navigator.geolocation.getCurrentPosition(p=>{map.setView([p.coords.latitude,p.coords.longitude],16)},gpsError,{enableHighAccuracy:true,timeout:12000})};
 $('baseBtn').onclick=()=>{baseVisible=!baseVisible;if(baseVisible)tileLayer.addTo(map);else map.removeLayer(tileLayer);$('baseBtn').textContent='薄い地図 '+(baseVisible?'ON':'OFF')};
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
-document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('active',x===b));mode=b.dataset.mode;if(mode!=='self'){$('gpsStatus').textContent=mode==='group'?'グループ共有はサーバー接続後に実装します。':'世界地図の集計は今後実装します。'} }else{$('gpsStatus').textContent='自分の記録を表示中です。'}drawRoutes()});
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.mode').forEach(x=>{
+    x.classList.toggle('active',x===b);
+  });
+  mode=b.dataset.mode;
+  if(mode!=='self'){
+    $('gpsStatus').textContent=mode==='group'
+      ? 'グループ共有はサーバー接続後に実装します。'
+      : '世界地図の集計は今後実装します。';
+  }else{
+    $('gpsStatus').textContent='自分の記録を表示中です。';
+  }
+  drawRoutes();
+});
 $('createGroup').onclick=()=>{const name=$('groupName').value.trim();if(!name){alert('グループ名を入力してください');return}const code=Math.random().toString(36).slice(2,8).toUpperCase();data.groups.push({id:String(Date.now()),name,code});save();$('groupName').value='';refresh()};
 $('joinGroup').onclick=()=>{const code=$('inviteInput').value.trim().toUpperCase();const g=data.groups.find(x=>x.code===code);if(!g){alert('この端末内に該当する招待コードはありません。別端末との参加はサーバー機能が必要です。');return}alert(g.name+' に参加済みです。')};
 $('postPhoto').onclick=()=>{const file=$('photoFile').files[0],caption=$('photoCaption').value.trim(),visibility=$('visibility').value;if(!file&&!caption){alert('写真かコメントを入力してください');return}const add=image=>{data.posts.unshift({id:String(Date.now()),caption,image,visibility,createdAt:new Date().toISOString()});save();$('photoFile').value='';$('photoCaption').value='';refresh()};if(file){if(file.size>1200000){alert('写真は1.2MB以下にしてください（端末内保存の容量制限のため）');return}const reader=new FileReader();reader.onload=()=>add(reader.result);reader.readAsDataURL(file)}else add(null)};
