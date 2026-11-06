@@ -113,6 +113,15 @@ const supabase = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
+ supabase.from('profiles').select('*').limit(1)
+  .then(({ data, error }) => {
+    const status = document.getElementById('gpsStatus');
+    if (status) {
+      status.textContent = error
+        ? 'Supabase接続エラー：' + error.message
+        : 'Supabase接続成功！';
+    }
+  });
 </script>
 </body>
 </html>
